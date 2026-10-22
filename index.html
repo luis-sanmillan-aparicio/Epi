@@ -174,7 +174,7 @@
     };
   }
   /* [mínimo, máximo, paso]  — los pesos van de 0,5 en 0,5 */
-  var LIM={reps:[1,99,1],sec:[1,60,1],rest:[0,600,5],warn:[0,60,1],g:[1,20,0.5],t:[1,20,0.5]};
+  var LIM={reps:[1,99,1],sec:[1,60,1],rest:[0,600,5],warn:[0,60,1],g:[0.5,20,0.5],t:[0.5,20,0.5]};
   function clamp(k,v){
     var s=LIM[k][2];
     if(s<1) v=Math.round(v/s)*s;   /* redondea al paso (0,5) */
