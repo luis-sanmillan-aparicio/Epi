@@ -173,8 +173,17 @@
       c:{rest:60,warn:10}
     };
   }
-  var LIM={reps:[1,99,1],sec:[1,60,1],rest:[0,600,5],warn:[0,60,1],g:[1,20,1],t:[1,20,1]};
-  function clamp(k,v){ return Math.min(LIM[k][1],Math.max(LIM[k][0],v)); }
+  /* [mínimo, máximo, paso]  — los pesos van de 0,5 en 0,5 */
+  var LIM={reps:[1,99,1],sec:[1,60,1],rest:[0,600,5],warn:[0,60,1],g:[1,20,0.5],t:[1,20,0.5]};
+  function clamp(k,v){
+    var s=LIM[k][2];
+    if(s<1) v=Math.round(v/s)*s;   /* redondea al paso (0,5) */
+    return Math.min(LIM[k][1],Math.max(LIM[k][0],v));
+  }
+  /* "1,5" o "1.5" -> 1.5 */
+  function num(s){ return parseFloat(String(s).replace(",",".")); }
+  /* 1.5 -> "1,5" */
+  function fmtKg(v){ return String(v).replace(".",","); }
   function load(){
     var c=defaults();
     try{
@@ -192,7 +201,7 @@
           if(!isNaN(v)&&v!==undefined) c.c[k]=clamp(k,v);
         });
         ["g","t"].forEach(function(k){
-          var v=o&&o.w&&parseInt(o.w[k],10);
+          var v=o&&o.w&&num(o.w[k]);
           if(!isNaN(v)&&v!==undefined) c.w[k]=clamp(k,v);
         });
       }
@@ -201,7 +210,7 @@
   }
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(cfg)); }catch(e){} }
   var cfg=load();
-  function wt(i){ return cfg.w[EX[i].w]+" kg"; }
+  function wt(i){ return fmtKg(cfg.w[EX[i].w])+" kg"; }
 
   /* ---------- Sonido ---------- */
   function audio(){
@@ -345,10 +354,11 @@
 
   /* ---------- Pantalla de ajustes ---------- */
   var sheet=$("sheet"), body=$("sheetBody");
-  /* nd = al cambiarlo no hace falta reiniciar la sesión */
+  /* nd = al cambiarlo no hace falta reiniciar la sesión
+     dec = admite decimales (0,5 kg) */
   var WFIELDS=[
-    {k:"g",l:"Peso codo de golfista",u:"kg",nd:true},
-    {k:"t",l:"Peso codo de tenista",u:"kg",nd:true}
+    {k:"g",l:"Peso codo de golfista",u:"kg",nd:true,dec:true},
+    {k:"t",l:"Peso codo de tenista",u:"kg",nd:true,dec:true}
   ];
   var FIELDS=[
     {k:"reps",l:"Repeticiones",u:""},
@@ -373,14 +383,19 @@
     var lab=document.createElement("label"); lab.htmlFor=id; lab.textContent=f.l;
     var row=document.createElement("div"); row.className="stepper";
     var minus=document.createElement("button"); minus.type="button"; minus.className="stp"; minus.textContent="−"; minus.setAttribute("aria-label","Menos: "+f.l);
-    var inp=document.createElement("input"); inp.id=id; inp.type="text"; inp.inputMode="numeric"; inp.pattern="[0-9]*"; inp.autocomplete="off"; inp.value=group[f.k];
+    var inp=document.createElement("input"); inp.id=id; inp.type="text";
+    inp.inputMode=f.dec?"decimal":"numeric";
+    inp.pattern=f.dec?"[0-9]*[.,]?[0-9]*":"[0-9]*";
+    inp.autocomplete="off";
+    function show(v){ return f.dec?fmtKg(v):v; }
+    inp.value=show(group[f.k]);
     var plus=document.createElement("button"); plus.type="button"; plus.className="stp"; plus.textContent="+"; plus.setAttribute("aria-label","Más: "+f.l);
     var unit=document.createElement("span"); unit.className="unit"; unit.textContent=f.u;
-    function cur(){ var n=parseInt(inp.value,10); return isNaN(n)?group[f.k]:n; }
+    function cur(){ var n=num(inp.value); return isNaN(n)?group[f.k]:n; }
     function set(v){
       v=clamp(f.k,v);
       if(v!==group[f.k] && !f.nd) dirty=true;
-      group[f.k]=v; inp.value=v; save();
+      group[f.k]=v; inp.value=show(v); save();
       if(f.nd) refreshSubs();
     }
     minus.addEventListener("click",function(){ set(cur()-LIM[f.k][2]); });
